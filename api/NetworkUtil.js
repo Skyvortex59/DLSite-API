@@ -1,6 +1,8 @@
 const puppeteer = require('puppeteer');
-const { exec } = require('child_process');
-const axios = require('axios')
+const axios = require('axios');
+const {
+    json
+} = require('express');
 
 class NetworkUtil {
     constructor() {
@@ -9,7 +11,7 @@ class NetworkUtil {
         this.page = null;
     }
 
-    async initialize(code, treatment) {
+    async initialize(code, request) {
         this.dlsite = `https://www.dlsite.com/maniax/work/=/product_id/${code}.html/?locale=en_US`;
 
         this.browser = await puppeteer.launch({
@@ -25,7 +27,7 @@ class NetworkUtil {
 
         let data;
 
-        switch (treatment) {
+        switch (request) {
             case "img":
                 data = await this.processImages();
                 break;
@@ -39,49 +41,48 @@ class NetworkUtil {
                 data = await this.processAllInOne();
                 break;
             default:
-                console.log("Invalid treatment");
+                data = JSON.stringify({
+                    code: false,
+                    message: "Invalid query searched."
+                })
+                console.log(data);
                 break;
         }
 
-        await this.sendDataToServer(data);
-
         await this.browser.close();
+        return data;
     }
 
     async processImages() {
-        const searchResultSelector = 'li.btn_yes';
-        await this.page.waitForSelector(searchResultSelector);
-        await this.page.click(searchResultSelector);
-
-        const imageAttributes = await this.page.evaluate(() => {
+        const imageLinks = await this.page.evaluate(() => {
             const images = Array.from(document.querySelectorAll("li.slider_item.active picture img"));
 
-            return images.map(img => {
-                return {
-                    srcset: img.getAttribute("srcset"),
-                };
-            });
+            const imageLink = images[0].getAttribute("srcset").split(",")[0].trim();
+            return imageLink;
         });
 
-        return imageAttributes;
+        return {
+            code: true,
+            response: {
+                image: imageLinks
+            }
+        };
     }
 
     async processName() {
-        const searchResultSelector = 'li.btn_yes';
-        await this.page.waitForSelector(searchResultSelector);
-        await this.page.click(searchResultSelector);
-
         const nameAttributes = await this.page.evaluate(() => {
             const name = Array.from(document.querySelectorAll("li.slider_item.active picture img"));
 
-            return name.map(name => {
-                return {
-                    alt: name.getAttribute("alt")
-                };
-            });
+            const nameAttribute = name[0].getAttribute("alt");
+            return nameAttribute;
         });
 
-        return nameAttributes;
+        return {
+            code: true,
+            response: {
+                name: nameAttributes
+            }
+        };
     }
 
     async processTags() {
@@ -90,51 +91,32 @@ class NetworkUtil {
             return tagElements.map(tag => tag.textContent);
         });
 
-        return tags;
+        return {
+            code: true,
+            response: {
+                tags: tags
+            }
+        };
     }
 
     async processAllInOne() {
-        const searchResultSelector = 'li.btn_yes';
-        await this.page.waitForSelector(searchResultSelector);
-        await this.page.click(searchResultSelector);
-
         const imageAttributes = await this.processImages();
         const nameAttributes = await this.processName();
         const tags = await this.processTags();
 
         const result = {
-            name: nameAttributes[0].alt,
-            image: imageAttributes[0].srcset,
-            tags: tags
+            code: true,
+            response: {
+                image: imageAttributes.response.image,
+                name: nameAttributes.response.name,
+                tags: tags.response.tags
+            }
         };
 
         return result;
     }
 
-    #convertToJson(data) {
-        try {
-            return JSON.stringify(data);
-        } catch (error) {
-            console.error('Erreur lors de la conversion en JSON :', error);
-            return null;
-        }
-    }
 
-    async sendDataToServer(data) {
-        const jsonData = this.#convertToJson(data);
-
-        if (!jsonData) {
-            console.log("Error converting data to JSON");
-            return;
-        }
-
-        try {
-            const response = await axios.post('http://localhost:80/API_php/api/dlsite/', jsonData); //localhost/API_php/api/data/
-            console.log("Data sent to server:", response.data);
-        } catch (error) {
-            console.error("Error parsing JSON:", error);
-        }
-    }
 }
 
 module.exports = NetworkUtil;
