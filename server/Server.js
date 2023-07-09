@@ -6,7 +6,7 @@ class Server {
   constructor() {
     this.app = express();
 
-    this.port; // Choisissez le port que vous souhaitez utiliser
+    this.port = 8080; // Choisissez le port que vous souhaitez utiliser
 
     this.server = null; // Variable pour stocker l'instance du serveur
 
@@ -18,15 +18,16 @@ class Server {
   initialize() {
     this.configureMiddleware();
     this.configureRoutes();
-    this.findAvailablePort()
-      .then(port => {
-        this.port = port;
-        this.sendPortToApi(port);
-        this.startListening();
-      })
-      .catch(error => {
-        console.error('Erreur lors de la recherche du port disponible :', error);
-      });
+    // this.findAvailablePort()
+    //   .then(port => {
+    //     this.port = port;
+    //     this.startListening();
+    //     this.sendPortToApi(port);
+    //   })
+    //   .catch(error => {
+    //     console.error('Erreur lors de la recherche du port disponible :', error);
+    //   });
+    this.startListening();
   }
 
 
