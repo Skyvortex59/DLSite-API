@@ -79,20 +79,33 @@ class Server {
     const apiUrl = 'http://localhost/API_php/api/port/';
 
     const data = {
-      port: port
+        port: port
     };
 
+    const options = {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(data)
+    };
+    console.log(options);
+
     try {
-      const response = await axios.post(apiUrl, data);
-      if (response.status === 200) {
-        console.log('Port envoyé avec succès à l\'API');
-      } else {
-        console.error('Échec de l\'envoi du port à l\'API');
-      }
+        const response = await fetch(apiUrl, options);
+        if (response.ok) {
+            console.log('Port sent to API successfully');
+            const responseData = await response.json();
+            console.log('API response:', responseData);
+        } else {
+            console.error('Failed to send port to API');
+            throw new Error('API request failed');
+        }
     } catch (error) {
-      console.error('Une erreur s\'est produite lors de la requête POST', error);
+        console.error('An error occurred while sending port to API:', error);
     }
   }
+
 
 
 
